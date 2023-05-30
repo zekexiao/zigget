@@ -1,50 +1,9 @@
 const std = @import("std");
-const clap = @import("clap");
+const utils = @import("utils.zig");
 
 pub const Options = struct {
     url: []const u8,
 };
-
-pub fn fileExist(fileName: []const u8) !bool {
-    std.fs.cwd().access(fileName, .{}) catch |e| switch (e) {
-        error.FileNotFound => return false,
-        else => return error.UnexpectedError,
-    };
-    return true;
-}
-
-pub fn createAllSymlink(allocator: std.mem.Allocator, fromDir: []const u8, distDir: []const u8) !void {
-    var out_dir = try std.fs.cwd().openIterableDir(fromDir, .{});
-    var it = out_dir.iterate();
-    while (try it.next()) |file| {
-        if (file.kind != .File) {
-            continue;
-        }
-        const filePath = try std.mem.concat(allocator, u8, &.{ fromDir, file.name });
-        defer allocator.free(filePath);
-        const distPath = try std.mem.concat(allocator, u8, &.{ distDir, file.name });
-        defer allocator.free(distPath);
-        if (try fileExist(distPath)) {
-            try std.fs.cwd().deleteFile(distPath);
-        }
-
-        try std.os.symlink(filePath, distPath);
-    }
-}
-pub fn execCommand(allocator: std.mem.Allocator, argv: []const []const u8, cwd: ?[]const u8) !void {
-    var env = try std.process.getEnvMap(allocator);
-    defer env.deinit();
-    var ec = try std.ChildProcess.exec(.{ .allocator = allocator, .argv = argv, .expand_arg0 = .expand, .env_map = &env, .cwd = cwd });
-    defer {
-        allocator.free(ec.stderr);
-        allocator.free(ec.stdout);
-    }
-    std.debug.print("{s}", .{ec.stdout});
-    std.debug.print("{s}", .{ec.stderr});
-    if (ec.term.Exited != 0) {
-        return error.ExecExitedFailed;
-    }
-}
 
 pub fn printHelp() void {
     std.debug.print("install username/repo, for install a repo\n", .{});
@@ -84,21 +43,21 @@ pub fn main() !void {
         defer allocator.free(url);
         const dir = try std.mem.concat(allocator, u8, &.{ sourceDir, arg2 });
         defer allocator.free(dir);
-        if (!(try fileExist(dir))) {
+        if (!(try utils.fileExist(dir))) {
             std.debug.print("--- git clone ---\n", .{});
-            try execCommand(allocator, &.{ "git", "clone", url, dir }, null);
+            try utils.execCommand(allocator, &.{ "git", "clone", url, dir }, null);
         } else {
             std.debug.print("{s} already installed\n", .{arg2});
             return;
         }
         std.debug.print("--- zig build ---\n", .{});
-        try execCommand(allocator, &.{ "zig", "build", "-Doptimize=ReleaseSafe", "-fsummary" }, dir);
+        try utils.execCommand(allocator, &.{ "zig", "build", "-Doptimize=ReleaseSafe", "-fsummary" }, dir);
 
         const zig_out_dir =
             try std.mem.concat(allocator, u8, &.{ dir, "/zig-out/bin/" });
         defer allocator.free(zig_out_dir);
         std.debug.print("{s} installed\n", .{arg2});
-        try createAllSymlink(allocator, zig_out_dir, binDir);
+        try utils.createAllSymlink(allocator, zig_out_dir, binDir);
     } else if (std.mem.eql(u8, arg1, "update")) {
         if (argv.len < 3) {
             printHelp();
@@ -107,25 +66,25 @@ pub fn main() !void {
         var arg2 = argv[2];
         const dir = try std.mem.concat(allocator, u8, &.{ sourceDir, arg2 });
         defer allocator.free(dir);
-        if (try fileExist(dir)) {
+        if (try utils.fileExist(dir)) {
             std.debug.print("--- git reset and pull ---\n", .{});
-            try execCommand(allocator, &.{
+            try utils.execCommand(allocator, &.{
                 "git",
                 "fetch",
                 "--all",
             }, dir);
-            try execCommand(allocator, &.{ "git", "reset", "--hard", "origin/master" }, dir);
-            try execCommand(allocator, &.{ "git", "pull" }, dir);
+            try utils.execCommand(allocator, &.{ "git", "reset", "--hard", "origin/master" }, dir);
+            try utils.execCommand(allocator, &.{ "git", "pull" }, dir);
         } else {
             std.debug.print("{s} not installed\n", .{arg2});
             return;
         }
         std.debug.print("--- zig build ---\n", .{});
-        try execCommand(allocator, &.{ "zig", "build", "-Doptimize=ReleaseSafe", "-fsummary" }, dir);
+        try utils.execCommand(allocator, &.{ "zig", "build", "-Doptimize=ReleaseSafe", "-fsummary" }, dir);
 
         const zig_out_dir = try std.mem.concat(allocator, u8, &.{ dir, "/zig-out/bin/" });
         defer allocator.free(zig_out_dir);
-        try createAllSymlink(allocator, zig_out_dir, binDir);
+        try utils.createAllSymlink(allocator, zig_out_dir, binDir);
         std.debug.print("{s} up to date\n", .{arg2});
     } else if (std.mem.eql(u8, arg1, "list")) {
         var source_dir = try std.fs.cwd().openIterableDir(sourceDir, .{});
