@@ -8,6 +8,7 @@ pub const Options = struct {
 pub fn printHelp() void {
     std.debug.print("install username/repo, for install a repo\n", .{});
     std.debug.print("update username/repo, for update a repo\n", .{});
+    std.debug.print("remove username/repo, for remove a repo\n", .{});
     std.debug.print("list, for list all of installed repo\n", .{});
 }
 
@@ -28,9 +29,9 @@ pub fn main() !void {
         return;
     }
 
-    const sourceDir = try std.mem.concat(allocator, u8, &.{ std.os.getenv("HOME") orelse "", "/.zigInstall/source/" });
+    const sourceDir = try std.mem.concat(allocator, u8, &.{ std.os.getenv("HOME") orelse "", "/.zigget/source/" });
     defer allocator.free(sourceDir);
-    const binDir = try std.mem.concat(allocator, u8, &.{ std.os.getenv("HOME") orelse "", "/.zigInstall/bin/" });
+    const binDir = try std.mem.concat(allocator, u8, &.{ std.os.getenv("HOME") orelse "", "/.zigget/bin/" });
     defer allocator.free(binDir);
 
     if (std.mem.eql(u8, arg1, "install")) {
@@ -104,5 +105,9 @@ pub fn main() !void {
                 std.debug.print("{s}/{s}\n", .{ dir.name, repo.name });
             }
         }
+    } else if (std.mem.eql(u8, arg1, "remove")) {
+        // TODO
+    } else {
+        printHelp();
     }
 }
