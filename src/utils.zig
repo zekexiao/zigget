@@ -12,7 +12,7 @@ pub fn createAllSymlink(allocator: std.mem.Allocator, fromDir: []const u8, distD
     var out_dir = try std.fs.cwd().openIterableDir(fromDir, .{});
     var it = out_dir.iterate();
     while (try it.next()) |file| {
-        if (file.kind != .File) {
+        if (file.kind != .file) {
             continue;
         }
         const filePath = try std.mem.concat(allocator, u8, &.{ fromDir, file.name });
