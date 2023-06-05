@@ -4,9 +4,9 @@ a simple tool for clone and build zig sources,
 
 do `zigget install zigtools/zls` command list:
 
-1. git clone https://github.com/zigtools/zls $HOME/.zigget/source
+1. git clone https://github.com/zigtools/zls $HOME/.zigget/source/zigtools/zls
 2. zig build -Doptimize=ReleaseFast
-3. ln -s repo/zig-out/bin/zls $HOME/.zigget/bin/zls
+3. ln -s $HOME/.zigget/source/zigtools/zls/zig-out/bin/zls $HOME/.zigget/bin/zls
 
 ## usage
 
